@@ -837,19 +837,31 @@ async function loadArt(appid) {
     } catch(e) {}
   }
 
-  // Fallback: Steam CDN header image — always free, no key needed
-  const url = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`;
-  S.artCache[appid] = url;
-  applyArt(appid, url);
+  // Try Steam CDN header directly (fast, free, works for most games)
+  const cdnUrl = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`;
+  applyArt(appid, cdnUrl, async () => {
+    // CDN 404'd (e.g. beta/unusual appid) — ask backend for Steam store API art
+    try {
+      const r = await fetch('/api/get_art?appid=' + appid);
+      if (r.ok) {
+        const d = await r.json();
+        S.artCache[appid] = d.art_url || '';
+        if (d.art_url) applyArt(appid, d.art_url);
+      } else { S.artCache[appid] = ''; }
+    } catch(e) { S.artCache[appid] = ''; }
+  });
 }
 
-function applyArt(appid, url) {
+function applyArt(appid, url, onFail) {
   const img = document.getElementById('art-img-' + appid);
   const ph  = document.getElementById('art-ph-' + appid);
   if (!img) return;
   if (url) {
-    img.onload = () => { img.style.display = 'block'; if (ph) ph.style.display = 'none'; };
-    img.onerror = () => { img.style.display = 'none'; if (ph) ph.style.removeProperty('display'); };
+    img.onload = () => { S.artCache[appid] = url; img.style.display = 'block'; if (ph) ph.style.display = 'none'; };
+    img.onerror = () => {
+      img.style.display = 'none'; if (ph) ph.style.removeProperty('display');
+      if (onFail) onFail(); else S.artCache[appid] = '';
+    };
     img.src = url;
   }
 }

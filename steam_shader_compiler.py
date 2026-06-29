@@ -617,27 +617,39 @@ class ShaderCompilerHTTPHandler(http.server.BaseHTTPRequestHandler):
             qs = urllib.parse.urlparse(self.path).query
             params_qs = dict(urllib.parse.parse_qsl(qs))
             appid = params_qs.get('appid', '')
-            if not appid or not steamgriddb_api_key:
+            if not appid:
                 self.send_response(204)
                 self.end_headers()
                 return
             try:
-                url = (f"https://www.steamgriddb.com/api/v2/grids/steam/{appid}"
-                       f"?dimensions=920x430&nsfw=false")
-                req = urllib.request.Request(url, headers={
-                    'Authorization': f'Bearer {steamgriddb_api_key}',
-                    'User-Agent': 'steam-shader-compiler/1.0',
-                })
-                with urllib.request.urlopen(req, timeout=8) as resp:
-                    data = json.loads(resp.read())
                 art_url = ''
-                if data.get('success') and data.get('data'):
-                    art_url = data['data'][0].get('url', '')
+                if steamgriddb_api_key:
+                    url = (f"https://www.steamgriddb.com/api/v2/grids/steam/{appid}"
+                           f"?dimensions=920x430&nsfw=false")
+                    req = urllib.request.Request(url, headers={
+                        'Authorization': f'Bearer {steamgriddb_api_key}',
+                        'User-Agent': 'steam-shader-compiler/1.0',
+                    })
+                    with urllib.request.urlopen(req, timeout=8) as resp:
+                        data = json.loads(resp.read())
+                    if data.get('success') and data.get('data'):
+                        art_url = data['data'][0].get('url', '')
+                if not art_url:
+                    # Steam store API — free, no key, covers betas and all appids
+                    url = (f"https://store.steampowered.com/api/appdetails"
+                           f"?appids={appid}&filters=basic")
+                    req = urllib.request.Request(
+                        url, headers={'User-Agent': 'steam-shader-compiler/1.0'})
+                    with urllib.request.urlopen(req, timeout=8) as resp:
+                        data = json.loads(resp.read())
+                    appid_str = str(appid)
+                    if data.get(appid_str, {}).get('success'):
+                        art_url = data[appid_str]['data'].get('header_image', '')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({'art_url': art_url}).encode())
-            except Exception as e:
+            except Exception:
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
