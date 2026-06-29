@@ -21,8 +21,6 @@
 ![Shader stutter cause](https://raw.githubusercontent.com/mrcgibb9876-hash/steam-shader-compiler/main/01-shader-stutter-cause.svg)
 
 
-
-
 ![Fossilize mechanism](https://raw.githubusercontent.com/mrcgibb9876-hash/steam-shader-compiler/main/02-fossilize-mechanism.svg)
 
 
