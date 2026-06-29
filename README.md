@@ -8,6 +8,14 @@
 
 ---
 
+## Screenshots
+
+| Idle — game library | Compiling — live progress | Done — compiled badges |
+|:---:|:---:|:---:|
+| ![Idle](screenshots/idle.png) | ![Compiling](screenshots/compiling.png) | ![Completed](screenshots/completed.png) |
+
+---
+
 ## Why does this exist?
 
 When you play a game on Linux through Proton, Vulkan needs to compile *pipeline state objects* — essentially GPU programs — the first time each shader combination is encountered. Steam records these encounters in `.foz` pipeline cache files while you play.
