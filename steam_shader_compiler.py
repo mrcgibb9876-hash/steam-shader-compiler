@@ -624,16 +624,19 @@ class ShaderCompilerHTTPHandler(http.server.BaseHTTPRequestHandler):
             try:
                 art_url = ''
                 if steamgriddb_api_key:
-                    url = (f"https://www.steamgriddb.com/api/v2/grids/steam/{appid}"
-                           f"?dimensions=920x430&nsfw=false")
-                    req = urllib.request.Request(url, headers={
-                        'Authorization': f'Bearer {steamgriddb_api_key}',
-                        'User-Agent': 'steam-shader-compiler/1.0',
-                    })
-                    with urllib.request.urlopen(req, timeout=8) as resp:
-                        data = json.loads(resp.read())
-                    if data.get('success') and data.get('data'):
-                        art_url = data['data'][0].get('url', '')
+                    try:
+                        url = (f"https://www.steamgriddb.com/api/v2/grids/steam/{appid}"
+                               f"?dimensions=920x430&nsfw=false")
+                        req = urllib.request.Request(url, headers={
+                            'Authorization': f'Bearer {steamgriddb_api_key}',
+                            'User-Agent': 'steam-shader-compiler/1.0',
+                        })
+                        with urllib.request.urlopen(req, timeout=8) as resp:
+                            data = json.loads(resp.read())
+                        if data.get('success') and data.get('data'):
+                            art_url = data['data'][0].get('url', '')
+                    except Exception:
+                        pass  # not in SteamGridDB — fall through to store API
                 if not art_url:
                     # Steam store API — free, no key, covers betas and all appids
                     url = (f"https://store.steampowered.com/api/appdetails"
