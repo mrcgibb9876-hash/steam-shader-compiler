@@ -15,7 +15,7 @@
 | ![Idle](screenshots/idle.png) | ![Compiling](screenshots/compiling.png) | ![Completed](screenshots/completed.png) |
 
 ---
-![Shader stutter cause](docs/diagrams/01-shader-stutter-cause.svg)
+
 ## The problem: what causes shader stutter on Linux
 
 When you play a Windows game through Proton, DirectX calls are translated to Vulkan by DXVK or VKD3D-Proton. Vulkan can't execute shaders as-is — each pipeline state object (the combination of a shader program, blend state, vertex layout, render pass, and more) must be compiled by your GPU driver into hardware machine code before it can run. That compilation happens on-demand: the first time the game triggers a new pipeline, the driver stalls to compile it. You feel that as a hitch or dropped frame.
