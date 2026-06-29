@@ -16,50 +16,42 @@
 
 ---
 
-## Why does this exist?
+## The problem: what causes shader stutter on Linux
 
-When you play a game on Linux through Proton, Vulkan needs to compile *pipeline state objects* — essentially GPU programs — the first time each shader combination is encountered. Steam records these encounters in `.foz` pipeline cache files while you play.
+When you play a Windows game through Proton, DirectX calls are translated to Vulkan by DXVK or VKD3D-Proton. Vulkan can't execute shaders as-is — each pipeline state object (the combination of a shader program, blend state, vertex layout, render pass, and more) must be compiled by your GPU driver into hardware machine code before it can run. That compilation happens on-demand: the first time the game triggers a new pipeline, the driver stalls to compile it. You feel that as a hitch or dropped frame.
 
-**Steam's built-in shader pre-compilation only runs when:**
-- You download or update a game
-- Valve has uploaded a pre-built shader pack for your exact GPU family
-- Your driver version matches what Valve compiled against
+Steam addresses this through two mechanisms working together:
 
-In practice this means:
-- Freshly installed games stutter badly during the first few hours of play
-- After a driver update, the compiled cache is invalidated and stutter returns
-- If Valve hasn't uploaded a pack for your GPU, you get nothing
-- The pre-compilation Steam does run is against a *generic* target, not your actual hardware
+1. **Recording** — A Fossilize layer captures every unique Vulkan pipeline state your game encounters during play, writing them into `.foz` files on disk.
+2. **Replay** — `fossilize_replay` reads those `.foz` files and drives your local GPU driver to compile each pipeline ahead of time, populating the driver's on-disk shader cache. The next time the game hits that pipeline, the driver loads it from cache instantly.
 
-**This tool does something different.** It takes the `.foz` files Steam recorded during *your* real sessions — shaders your GPU actually encountered — and replays them through `fossilize_replay` directly on your hardware, producing a fully compiled pipeline cache tailored to your specific GPU and driver. The next time you launch the game, those pipelines load from the cache instantly: **zero compile stutter**.
+Steam also distributes community-sourced `.foz` packs so players can benefit from pipelines others have already recorded, even before their first session. These packs are downloaded and replayed locally on your own hardware — Steam does not ship pre-built GPU machine code, because compiled binaries are GPU and driver-version specific.
 
 ---
 
-## How it compares
+## What this tool adds
 
-| | Steam built-in | This tool |
-|---|---|---|
-| Compiled against your actual GPU | ✗ generic target | ✓ your exact hardware |
-| Runs after driver updates | ✗ | ✓ re-run anytime |
-| Covers shaders you've actually seen | ✗ Valve's selection | ✓ your recorded sessions |
-| Runs while you're at the desktop | ✗ only on game launch | ✓ runs offline, any time |
-| Parallel compilation control | ✗ | ✓ choose thread count |
-| Per-game or all-games | ✗ all or nothing | ✓ select individual games |
+Steam's built-in replay runs automatically on game download or update, and optionally in the background while Steam is open. That covers the common case well. This tool is useful in situations the built-in system doesn't handle:
+
+- **After a GPU driver update.** Driver updates invalidate previously compiled pipelines, and Steam may not automatically re-replay your full recorded set. Running this tool immediately after an update recompiles everything from your `.foz` files against the new driver.
+- **Per-game, on demand.** Steam processes all games; this tool lets you target specific titles and re-run the replay whenever you want — without waiting for a game launch to trigger it.
+- **Full control over resources.** Choose exactly how many CPU threads `fossilize_replay` uses and which GPU to compile against — useful on hybrid GPU laptops where you want to target your discrete card.
+- **Visibility.** Live output from `fossilize_replay`, per-file progress, and per-game completion badges so you know exactly what has been compiled and what hasn't.
 
 ---
 
 ## Features
 
-- **Scans all Steam libraries** automatically, finds every game with a shader pipeline cache
-- **Compiles on your GPU** using the `fossilize_replay` binary already bundled with Steam — no extra tools needed
-- **Multi-threaded** with a slider to control CPU thread count
-- **Multi-GPU aware** — select which GPU to compile for (great for hybrid laptop/desktop setups)
+- **Scans all Steam libraries** automatically and finds every game with a `.foz` pipeline cache
+- **Compiles on your GPU** using the `fossilize_replay` binary already bundled inside your Steam installation — no extra tools needed
+- **Multi-GPU aware** — select which GPU to target; useful for hybrid laptop setups (e.g. NVIDIA dGPU + AMD iGPU)
+- **Thread count slider** — control how many CPU threads `fossilize_replay` uses
 - **Per-game selection** — compile one game or all of them at once
-- **Live progress** — per-file and cross-game progress bars, real-time fossilize output log
-- **Game artwork** — shows header images automatically from Steam's CDN (no API key needed); optionally use [SteamGridDB](https://www.steamgriddb.com) for HD community artwork
-- **Compiled / Pending badges** — see at a glance which games have been pre-compiled this session
-- **Cache management** — clear a game's shader cache with one click to force a full recompile
-- **Self-contained binary** — one file, no Python runtime required after install
+- **Live progress log** — real-time `fossilize_replay` output, per-file and per-game progress bars
+- **Game artwork** — header images loaded automatically from Steam's CDN; optionally use a [SteamGridDB](https://www.steamgriddb.com) API key for higher-quality community artwork
+- **Compiled / Pending badges** — at-a-glance status for each game in your library
+- **Cache clear** — wipe a game's compiled cache with one click to force a full recompile from scratch
+- **Self-contained binary** — one file, no Python runtime required after build
 
 ---
 
@@ -73,15 +65,17 @@ chmod +x install.sh
 ```
 
 The installer will:
+
 1. Build a self-contained binary with PyInstaller
 2. Install it to `~/.local/share/steam-shader-compiler/`
-3. Create a desktop entry so it appears in your app launcher
+3. Create a desktop entry so it appears in your application launcher
 4. Optionally set up a systemd timer to run automatically every 6 hours
 
 **Requirements:**
-- Linux — Arch, CachyOS, SteamOS, Ubuntu, Fedora, or any distro with Steam
-- Steam installed at `~/.local/share/Steam` or `~/.steam/steam`
-- Python 3.8+ (only needed to build; the installed binary is self-contained)
+
+- Linux — Arch, CachyOS, SteamOS, Ubuntu, Fedora, or any distro with Steam installed
+- Steam at `~/.local/share/Steam` or `~/.steam/steam`
+- Python 3.8+ (build only; the installed binary is self-contained)
 - A Vulkan-capable GPU
 
 ---
@@ -96,40 +90,43 @@ steam-shader-compiler
 
 The app opens in your browser at `http://127.0.0.1:8543`.
 
-1. Your games appear automatically — games with shader caches show a **Pending** badge
+1. Your games appear automatically — any game with `.foz` pipeline cache files shows a **Pending** badge
 2. Select the games you want to compile (all are selected by default)
 3. Choose your GPU and thread count in the sidebar
 4. Click **Compile Selected**
-5. Watch the live progress log — each game's pipelines are replayed and compiled
-6. Games show a **Compiled** badge when done — launch and play stutter-free
-
----
-
-## Artwork
-
-Game header images load automatically from Steam's CDN — **no API key required**.
-
-For higher-quality community artwork, you can optionally add a free [SteamGridDB](https://www.steamgriddb.com/profile/preferences/api) API key in the sidebar. SteamGridDB serves 920×430 HD grid images sourced from the community and covers a wider range of titles.
+5. Watch the live log as each game's pipelines are replayed through `fossilize_replay`
+6. Games show a **Compiled** badge when done
 
 ---
 
 ## How it works under the hood
 
-Steam's Proton records every unique Vulkan pipeline state encountered during gameplay into `.foz` files inside:
+While you play, Steam's Fossilize layer records every Vulkan pipeline state the game encounters into `.foz` files:
 
 ```
 ~/.local/share/Steam/steamapps/shadercache/<appid>/fozpipelinesv6/
 ```
 
-This tool finds all those files, then runs Steam's own `fossilize_replay` binary:
+This tool finds all those files, then calls Steam's own `fossilize_replay` binary:
 
-```
+```bash
 fossilize_replay --num-threads <N> --device-index <GPU> --progress <file.foz>
 ```
 
-`fossilize_replay` replays each recorded pipeline against the real Vulkan driver on your machine, populating the on-disk pipeline cache. When the game launches next, the Vulkan driver finds those compiled pipelines in cache and loads them instantly rather than compiling on-demand mid-frame.
+`fossilize_replay` feeds each recorded pipeline state through your local Vulkan driver, which compiles it to GPU machine code and writes it into the driver's on-disk cache. When the game runs next, the driver finds those compiled pipelines in cache and skips the on-demand compilation entirely.
 
-The result is the same as if you had played through every scene of the game already, from a shader-compilation perspective — without actually having to do it.
+This is the same mechanism Steam uses internally for its own background pre-caching — this tool just gives you direct, manual control over when it runs, for which games, and with which resources.
+
+---
+
+## When to re-run
+
+| Situation | Action |
+|---|---|
+| GPU driver updated | Re-run for affected games |
+| New game installed | Run for that game before first session |
+| Shader stutter returned unexpectedly | Clear cache for that game, then re-run |
+| You've played significantly more of a game | Re-run to compile newly recorded pipelines |
 
 ---
 
@@ -137,8 +134,8 @@ The result is the same as if you had played through every scene of the game alre
 
 | File | Purpose |
 |------|---------|
-| `steam_shader_compiler.py` | Backend HTTP server + fossilize runner |
-| `index.html` | Web UI (served by the backend) |
+| `steam_shader_compiler.py` | Backend HTTP server and fossilize runner |
+| `index.html` | Web UI served by the backend |
 | `steam-shader-compiler.spec` | PyInstaller build spec |
 | `install.sh` | Build and install script |
 | `uninstall.sh` | Uninstall script |
@@ -147,20 +144,20 @@ The result is the same as if you had played through every scene of the game alre
 
 ## FAQ
 
-**Do I need to run this more than once?**
-Run it again after a GPU driver update (which invalidates old pipeline caches), after installing a new game, or whenever you notice stutter returning.
+**Does this replace Steam's built-in shader pre-caching?**
+No — they complement each other. Steam's system downloads community-recorded `.foz` packs and replays them automatically. This tool replays the `.foz` files recorded from *your own sessions*, on demand, and gives you manual control over when and how the replay runs. Both are worth having.
 
-**Will it hurt performance if the cache is already compiled?**
-No. `fossilize_replay` skips pipelines already in the cache. Subsequent runs are very fast.
-
-**What about the shader caches Steam downloads automatically?**
-Those are Valve's pre-built packs targeted at popular GPU families. This tool *complements* them — it compiles the shaders you've actually encountered, on your actual hardware, which Steam's packs may not fully cover.
+**Will running this twice cause any harm?**
+No. `fossilize_replay` skips pipelines that are already compiled in the driver cache. Re-running after games are already compiled is fast and safe.
 
 **Is it safe to run while Steam is open?**
-Yes. The `.foz` source files are only read, never modified. The compiled pipeline cache is written atomically by the Vulkan driver.
+Yes. The `.foz` source files are only read, never modified. The compiled pipeline cache is written by the Vulkan driver.
 
-**Why not just use the `shader_pre_caching` option in Steam?**
-Steam's pre-caching only runs on game launch and download, compiles against a generic GPU target, and can't be triggered manually. This tool gives you full control — run it on demand, pick your GPU, choose your thread count, and compile only the games you want.
+**Why do I need to re-run after a driver update?**
+Compiled pipeline binaries are specific to your GPU driver version. A driver update invalidates the previously compiled cache, and the pipelines need to be replayed again against the new driver.
+
+**My game still stutters after compiling. Why?**
+`fossilize_replay` can only compile pipelines that have been recorded in your `.foz` files. Areas of a game you haven't played yet won't have their pipelines recorded, so stutter can still occur when you first enter new content. Playing further and re-running the tool will cover more of the game over time.
 
 ---
 
@@ -174,4 +171,9 @@ Steam's pre-caching only runs on game launch and download, compiles against a ge
 
 ## Credits
 
-Built on top of [Fossilize](https://github.com/ValveSoftware/Fossilize) by Valve Software, which is already bundled inside your Steam installation at `~/.local/share/Steam/ubuntu12_64/fossilize_replay`.
+Built on top of [Fossilize](https://github.com/ValveSoftware/Fossilize) by Valve Software, which is bundled inside every Steam installation at:
+
+```
+~/.local/share/Steam/ubuntu12_64/fossilize_replay
+```
+
