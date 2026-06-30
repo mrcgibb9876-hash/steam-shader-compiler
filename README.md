@@ -10,11 +10,17 @@
 
 ## Screenshots
 
-| Game library | Compiling | Benchmark result |
-|:---:|:---:|:---:|
-| ![Library](screenshots/library.png) | ![Compiling](screenshots/compiling.png) | ![Benchmark](screenshots/benchmark.png) |
+**Game library** — every Steam game with a recorded shader cache, with per-game FOZ count and cache size.
 
-> Drop your own captures into `screenshots/` as `library.png`, `compiling.png`, and `benchmark.png`.
+![Library](screenshots/library.png)
+
+**Compiling** — live `fossilize_replay` output, per-file and cross-game progress, GPU and thread controls.
+
+![Compiling](screenshots/compiling.png)
+
+**Benchmark** — optional before/after frametime comparison for a game, headlined by the 1% low FPS.
+
+![Benchmark](screenshots/benchmark.png)
 
 ---
 
@@ -73,7 +79,9 @@ Steam must be installed and run at least once (Stutterless uses the `fossilize_r
 
 ### Optional: benchmark a game
 
-Click the chart icon on any game card to open its benchmark panel. It gives you a one-line Steam launch option to paste in; play a couple of minutes before compiling, compile, then play again. Stutterless parses the two MangoHud logs and shows your **1% low FPS** before vs after with a frametime graph. (Average FPS barely changes — 1% low is where reduced stutter shows.)
+Click the chart icon on any game card to open its benchmark panel. It gives you a one-line Steam launch option to paste in; play through a stutter-prone area before compiling, compile, then play the same area again. Stutterless parses the two MangoHud logs and shows your **1% low FPS** before vs after with a frametime graph.
+
+The size of the gain depends on how much was left to compile. If a game's cache is already fully built (Steam may have done it in the background, or you compiled earlier), there's little or nothing new to gain and the difference will be small — that's expected. The biggest improvements show on a fresh cache or right after a driver update, when the most pipelines are compiled on-demand. For a fair comparison, play the same area for a similar length of time in both runs.
 
 ---
 
