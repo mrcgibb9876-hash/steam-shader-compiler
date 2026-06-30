@@ -41,6 +41,7 @@ Stutterless uses the same `fossilize_replay` tool Steam ships, but gives you man
 - **Pick your GPU and thread count** — useful on hybrid laptops where you want to target the discrete GPU.
 - **See the result** — before/after cache size, and an optional MangoHud benchmark showing your 1% low FPS and frametime graph before vs after compiling.
 - **Auto-update (optional)** — a background timer keeps shaders compiled, and only runs while on AC power.
+- **Clear a stale cache** — per-game (keeps your recordings) or the whole driver cache, for when shaders go corrupted.
 
 Stutterless complements Steam's system; it doesn't replace it.
 
@@ -85,14 +86,30 @@ The size of the gain depends on how much was left to compile. If a game's cache 
 
 ---
 
+## Clearing a cache
+
+Sometimes a compiled cache goes stale or corrupted and a game starts stuttering again even though it was compiled before. Stutterless has two clear options for this.
+
+**Per-game clear** — the trash icon on each game card (appears on hover). This removes that game's *compiled* pipeline cache but **keeps your recorded `.foz` files**, then marks the game pending. Select it and press Compile to rebuild cleanly from your recordings — no replaying or re-downloading needed. Use this when one game looks corrupted or its stutter came back.
+
+**Clear driver cache** — the button in the **Maintenance** panel in the sidebar. This clears the global GPU driver shader caches (NVIDIA GLCache and Mesa). Unlike the per-game clear, this is **global** — it affects every application, not just one game — because the driver stores compiled shaders keyed by hash across all apps, not per game. The driver rebuilds these automatically. Use this only if you suspect the driver cache itself is corrupted (for example, visual glitches across multiple games). Your Steam recordings are never touched by either button.
+
+| Button | What it removes | Keeps `.foz`? | Scope |
+|---|---|---|---|
+| Per-game clear (card) | That game's compiled pipeline cache | Yes | One game |
+| Clear driver cache (sidebar) | NVIDIA GLCache + Mesa caches | Yes | All apps |
+
+---
+
 ## When to re-run
 
 | Situation | Why |
 |---|---|
 | GPU driver updated | The compiled cache is invalidated and must be rebuilt |
 | New game installed | No pipelines compiled for it yet |
-| Stutter returned | Clear that game's cache, then recompile |
+| Stutter returned | Clear that game's cache (card trash icon), then recompile |
 | Played much more of a game | New areas record new pipelines to compile |
+| Glitches across many games | Clear the driver cache (Maintenance panel), then recompile |
 
 ---
 

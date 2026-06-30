@@ -1,4 +1,4 @@
-('/home/marc/Downloads/files/build/stutterless/PYZ-00.pyz',
+('/home/marc/Documents/files/build/stutterless/PYZ-00.pyz',
  [('__future__', '/usr/lib/python3.14/__future__.py', 'PYMODULE'),
   ('_aix_support', '/usr/lib/python3.14/_aix_support.py', 'PYMODULE'),
   ('_ast_unparse', '/usr/lib/python3.14/_ast_unparse.py', 'PYMODULE'),

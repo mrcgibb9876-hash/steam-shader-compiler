@@ -793,24 +793,82 @@ def clear_game_cache(appid):
     game = games_data.get(appid)
     if not game:
         return False, "Game not found."
-        
+
     shader_dir = os.path.join(game['library'], 'steamapps', 'shadercache', appid)
-    if os.path.exists(shader_dir):
-        try:
-            shutil.rmtree(shader_dir)
-            os.makedirs(shader_dir, exist_ok=True)
-            log(f"Cleared shader cache directory for {game['name']} ({appid})")
-            
-            # Refresh this game's entry in our dictionary
-            game['cache_size'] = 0
-            game['foz_files'] = []
-            game['status'] = 'no_shaders'
-            return True, f"Successfully cleared shader cache for {game['name']}."
-        except Exception as e:
-            log(f"Error clearing cache for {appid}: {e}")
-            return False, f"Error clearing cache: {e}"
-    else:
+    if not os.path.exists(shader_dir):
         return True, "No shader cache folder existed."
+
+    # Clear the COMPILED pipeline cache but PRESERVE the .foz recordings in
+    # fozpipelinesv6/. The recordings are the source data (costly to lose);
+    # the compiled cache is what gets dirty/corrupted and is rebuilt by replay.
+    #
+    # Layout inside shadercache/<appid>/:
+    #   fozpipelinesv6/        <- RECORDINGS (keep)
+    #   steam_pipeline_cache.foz, *.bin, DXVK/GL caches  <- COMPILED (remove)
+    recordings_dir = os.path.join(shader_dir, 'fozpipelinesv6')
+    removed = 0
+    kept_foz = 0
+
+    if os.path.isdir(recordings_dir):
+        for root, _dirs, files in os.walk(recordings_dir):
+            kept_foz += sum(1 for f in files if f.endswith('.foz'))
+
+    try:
+        for entry in os.listdir(shader_dir):
+            full = os.path.join(shader_dir, entry)
+            # Never touch the recordings directory.
+            if entry == 'fozpipelinesv6':
+                continue
+            try:
+                if os.path.isdir(full):
+                    removed += sum(len(fs) for _r, _d, fs in os.walk(full))
+                    shutil.rmtree(full)
+                else:
+                    os.remove(full)
+                    removed += 1
+            except Exception:
+                pass
+
+        game['cache_size'] = get_dir_size(shader_dir)
+        if kept_foz > 0:
+            game['status'] = 'pending'
+        log(f"Cleared compiled cache for {game['name']} ({appid}); "
+            f"removed {removed} item(s), kept {kept_foz} recording(s).")
+        return True, (f"Cleared compiled cache for {game['name']}. "
+                      f"{kept_foz} recording(s) kept — select it and compile to rebuild.")
+    except Exception as e:
+        log(f"Error clearing cache for {appid}: {e}")
+        return False, f"Error clearing cache: {e}"
+
+def clear_driver_cache():
+    """Clear the GLOBAL GPU driver shader caches (NVIDIA GLCache + Mesa).
+    These are keyed by shader hash across ALL apps, so this is not per-game.
+    They regenerate automatically. Returns (ok, message)."""
+    home = os.path.expanduser('~')
+    targets = [
+        os.path.join(home, '.cache', 'nvidia', 'GLCache'),
+        os.path.join(home, '.nv', 'GLCache'),
+        os.path.join(home, '.cache', 'mesa_shader_cache'),
+        os.path.join(home, '.cache', 'mesa_shader_cache_db'),
+        os.path.join(home, '.cache', 'radv_builtin_shaders'),
+    ]
+    cleared = []
+    freed = 0
+    for t in targets:
+        if os.path.isdir(t):
+            try:
+                freed += get_dir_size(t)
+                shutil.rmtree(t)
+                os.makedirs(t, exist_ok=True)
+                cleared.append(os.path.basename(t))
+            except Exception as e:
+                log(f"Could not clear {t}: {e}")
+    if not cleared:
+        return True, "No driver caches found to clear (they may be elsewhere or already empty)."
+    gb = freed / (1024**3)
+    size_str = f"{gb:.1f} GB" if gb >= 1 else f"{freed / (1024**2):.0f} MB"
+    log(f"Cleared driver shader caches: {', '.join(cleared)} (~{size_str}).")
+    return True, f"Cleared driver caches ({', '.join(cleared)}), freed ~{size_str}."
 
 # Run a shader compilation job (Background Thread)
 def run_compile_job(target_appids=None):
@@ -1273,6 +1331,13 @@ class ShaderCompilerHTTPHandler(http.server.BaseHTTPRequestHandler):
                 return
                 
             success, msg = clear_game_cache(appid)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'success': success, 'message': msg}).encode('utf-8'))
+
+        elif self.path == '/api/clear_driver_cache':
+            success, msg = clear_driver_cache()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
