@@ -6,7 +6,10 @@ After one run, the compiled pipeline cache grew to nearly 60,000 MB — a 12× i
 That difference is pipelines that would otherwise have been compiled on-demand, mid-frame, while you’re playing. Every one of those is a hitch you’ll never see.
 Check your own cache size right now:
 
+```bash
 du -sh ~/.local/share/Steam/steamapps/shadercache/
+```
+
 
 Run it again after using this tool. The difference tells the whole story
 
