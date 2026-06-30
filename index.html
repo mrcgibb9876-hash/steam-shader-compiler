@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Shader Pre-Cache</title>
+<title>Stutterless</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -408,6 +408,141 @@ header {
 .toolbar-spacer { flex:1; }
 .cpu-chip { font-family:var(--mono); font-size:11px; color:var(--text3); padding:4px 8px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; }
 
+/* ── Toggle switch (auto-update) ─── */
+.toggle-row { display:flex; align-items:center; gap:12px; }
+.toggle-text { flex:1; min-width:0; }
+.toggle-title { font-size:12px; font-weight:600; color:var(--text); }
+.toggle-sub { font-size:10px; color:var(--text3); margin-top:2px; }
+.switch { position:relative; flex-shrink:0; cursor:pointer; }
+.switch input { position:absolute; opacity:0; width:0; height:0; }
+.switch-track {
+  display:block; width:40px; height:22px; border-radius:22px;
+  background:var(--bg); border:1px solid var(--border2);
+  transition:background .2s, border-color .2s;
+}
+.switch-thumb {
+  position:absolute; top:3px; left:3px; width:16px; height:16px;
+  border-radius:50%; background:var(--text3);
+  transition:transform .2s, background .2s;
+}
+.switch input:checked + .switch-track { background:var(--adim); border-color:var(--accent); }
+.switch input:checked + .switch-track .switch-thumb { transform:translateX(18px); background:var(--accent); }
+.switch input:focus-visible + .switch-track { box-shadow:0 0 0 3px var(--adim); }
+.power-hint { font-size:10px; margin-top:8px; min-height:0; }
+.power-hint.unplugged { color:var(--yellow); }
+
+/* ── Last-run results panel ─── */
+.result-gain { text-align:center; padding:6px 0 10px; }
+.result-gain-val { font-family:var(--mono); font-size:26px; font-weight:700; color:var(--green); letter-spacing:-0.02em; line-height:1; }
+.result-gain-lbl { font-size:10px; color:var(--text3); margin-top:4px; text-transform:uppercase; letter-spacing:0.04em; }
+.result-ba { display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--rsm); padding:10px; }
+.result-ba-item { flex:1; text-align:center; min-width:0; }
+.result-ba-lbl { font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; }
+.result-ba-val { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--text2); margin-top:2px; }
+.result-ba-val.accent { color:var(--accent); }
+.result-arrow { width:16px; height:16px; color:var(--text3); flex-shrink:0; }
+.result-total { font-size:10px; color:var(--text3); text-align:center; margin-top:8px; }
+
+/* ── HANDHELD / GAMEPAD (Steam Deck, ROG Ally, Legion Go) ─── */
+/* Short landscape screens: bigger tap targets, denser horizontal layout. */
+@media (max-height: 800px) and (min-width: 701px) {
+  :root { --header-h: 48px; --toolbar-h: 64px; }
+  .game-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; padding: 10px; }
+  .log-wrap { height: 90px; }
+  /* Larger, thumb-friendly controls */
+  .btn { padding: 12px 18px; font-size: 14px; min-height: 44px; }
+  .filter-tab { padding: 10px 16px; min-height: 40px; }
+  .gpu-card { padding: 12px; min-height: 56px; }
+  .switch-track { width: 48px; height: 26px; }
+  .switch-thumb { width: 20px; height: 20px; }
+  .switch input:checked + .switch-track .switch-thumb { transform: translateX(22px); }
+  input[type="range"] { height: 28px; }
+  .card-select { width: 28px; height: 28px; }
+}
+
+/* ── Benchmark detail panel (expandable) ─── */
+.bench-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.bench-overlay.open { display: flex; }
+.bench-modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--r); width: 100%; max-width: 640px;
+  max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.bench-hdr {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg2); z-index: 2;
+}
+.bench-hdr-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bench-close { width: 30px; height: 30px; border-radius: var(--rsm); flex-shrink: 0;
+  border: 1px solid var(--border2); background: var(--bg3); color: var(--text2);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.bench-close:hover { color: var(--text); background: var(--border); }
+.bench-body { padding: 18px; }
+
+/* Headline improvement */
+.bench-headline { text-align: center; padding: 8px 0 18px; }
+.bench-imp-val { font-family: var(--mono); font-size: 40px; font-weight: 700;
+  letter-spacing: -.03em; line-height: 1; color: var(--green); }
+.bench-imp-val.neg { color: var(--red); }
+.bench-imp-lbl { font-size: 11px; color: var(--text3); margin-top: 6px;
+  text-transform: uppercase; letter-spacing: .05em; }
+
+/* Before/after metric cards */
+.bench-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.bench-metric { background: var(--bg); border: 1px solid var(--border); border-radius: var(--rsm); padding: 12px; }
+.bench-metric.before { border-left: 3px solid var(--red); }
+.bench-metric.after  { border-left: 3px solid var(--green); }
+.bench-metric-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; }
+.bench-metric-big { font-family: var(--mono); font-size: 22px; font-weight: 700; margin: 4px 0 2px; }
+.bench-metric.before .bench-metric-big { color: var(--red); }
+.bench-metric.after  .bench-metric-big { color: var(--green); }
+.bench-metric-sub { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+
+/* Frametime graph */
+.bench-graph-wrap { margin-bottom: 16px; }
+.bench-graph-title { font-size: 11px; color: var(--text2); margin-bottom: 8px; display: flex; justify-content: space-between; }
+.bench-graph { width: 100%; height: 140px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--rsm); display: block; }
+.bench-legend { display: flex; gap: 16px; justify-content: center; margin-top: 8px; font-size: 11px; color: var(--text2); }
+.bench-legend span { display: flex; align-items: center; gap: 5px; }
+.bench-dot { width: 10px; height: 3px; border-radius: 2px; }
+
+/* Setup state (no logs yet) */
+.bench-setup { }
+.bench-step { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.bench-step:last-child { border-bottom: none; }
+.bench-step-num { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  background: var(--adim); color: var(--accent); font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; }
+.bench-step-txt { font-size: 13px; line-height: 1.5; color: var(--text2); }
+.bench-launch { display: flex; gap: 8px; margin: 10px 0; }
+.bench-launch input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: var(--rsm); padding: 8px 10px; color: var(--text); font-family: var(--mono); font-size: 11px; }
+.bench-warn { background: var(--ydim); border: 1px solid var(--yellow); border-radius: var(--rsm);
+  padding: 10px 12px; font-size: 12px; color: var(--yellow); margin-bottom: 14px; }
+
+/* Details button on card */
+.card-details-btn {
+  position: absolute; bottom: 6px; right: 6px; z-index: 3;
+  width: 26px; height: 26px; border-radius: 6px;
+  background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.15);
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s;
+}
+.game-card:hover .card-details-btn { opacity: 1; }
+.card-details-btn svg { width: 14px; height: 14px; }
+/* On handhelds/touch, always show it */
+@media (max-height: 800px), (pointer: coarse) {
+  .card-details-btn { opacity: .85; }
+}
+
 /* ── MOBILE ─── */
 @media (max-width: 700px) {
   :root { --header-h: 52px; --toolbar-h: 56px; }
@@ -463,7 +598,7 @@ header {
     </svg>
   </div>
   <div>
-    <div class="header-title">Shader Pre-Cache</div>
+    <div class="header-title">Stutterless</div>
     <div class="header-sub">fossilize_replay · vulkan</div>
   </div>
   <div class="header-right">
@@ -518,6 +653,27 @@ header {
       </div>
     </div>
 
+    <!-- Auto-update -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Auto-update
+      </div>
+      <div class="panel-body">
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <div class="toggle-title">Keep shaders compiled</div>
+            <div class="toggle-sub">Runs every 6h on idle. AC power only.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="auto-update-toggle" onchange="setAutoUpdate(this.checked)">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </label>
+        </div>
+        <div class="power-hint" id="power-hint"></div>
+      </div>
+    </div>
+
     <!-- Threads -->
     <div class="panel">
       <div class="panel-hdr">
@@ -567,6 +723,32 @@ header {
       </div>
     </div>
 
+    <!-- Last run results -->
+    <div class="panel" id="results-panel" style="display:none;">
+      <div class="panel-hdr">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Last Run
+      </div>
+      <div class="panel-body">
+        <div class="result-gain">
+          <div class="result-gain-val" id="result-gained">—</div>
+          <div class="result-gain-lbl">new pipelines compiled</div>
+        </div>
+        <div class="result-ba">
+          <div class="result-ba-item">
+            <div class="result-ba-lbl">Before</div>
+            <div class="result-ba-val" id="result-before">—</div>
+          </div>
+          <svg class="result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div class="result-ba-item">
+            <div class="result-ba-lbl">After</div>
+            <div class="result-ba-val accent" id="result-after">—</div>
+          </div>
+        </div>
+        <div class="result-total" id="result-total"></div>
+      </div>
+    </div>
+
   </aside>
   <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
@@ -602,7 +784,7 @@ header {
         <button class="btn btn-ghost" style="padding:2px 8px;font-size:10px;" onclick="clearLog()">Clear</button>
       </div>
       <div class="log-body" id="log-body">
-        <div class="log-line info"><span class="log-ts">——</span><span class="log-msg">Shader Pre-Cache ready.</span></div>
+        <div class="log-line info"><span class="log-ts">——</span><span class="log-msg">Stutterless ready.</span></div>
       </div>
     </div>
 
@@ -623,6 +805,19 @@ header {
   <div class="cpu-chip">CPU <span id="tb-cpu">0%</span></div>
 </div>
 
+<!-- Benchmark detail modal -->
+<div class="bench-overlay" id="bench-overlay" onclick="if(event.target===this)closeBench()">
+  <div class="bench-modal">
+    <div class="bench-hdr">
+      <div class="bench-hdr-title" id="bench-title">Benchmark</div>
+      <button class="bench-close" onclick="closeBench()" aria-label="Close">×</button>
+    </div>
+    <div class="bench-body" id="bench-body">
+      <div style="text-align:center;color:var(--text3);padding:30px;">Loading…</div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ────────────────────────────────
 const S = {
@@ -632,6 +827,7 @@ const S = {
   logLen: 0, hasApiKey: false,
   artCache: {}, filter: 'all',
   mobileTab: 'all', sidebarOpen: false,
+  autoUpdate: false,
 };
 
 // ── Sidebar toggle (mobile) ───────────────
@@ -679,6 +875,44 @@ function updateUI(d) {
     const ks = document.getElementById('key-status');
     ks.textContent = S.hasApiKey ? 'Set ✓' : 'None';
     ks.className = 'api-key-status ' + (S.hasApiKey ? 'set' : 'unset');
+  }
+
+  // Auto-update toggle + AC power hint
+  if (d.auto_update_enabled !== undefined) {
+    S.autoUpdate = d.auto_update_enabled;
+    const tog = document.getElementById('auto-update-toggle');
+    if (tog && document.activeElement !== tog && !tog.disabled) {
+      tog.checked = d.auto_update_enabled;
+    }
+    const hint = document.getElementById('power-hint');
+    if (hint) {
+      if (d.auto_update_enabled && d.on_ac_power === false) {
+        hint.textContent = '⚠ On battery — scheduled runs are paused until you plug in.';
+        hint.className = 'power-hint unplugged';
+      } else if (d.auto_update_enabled) {
+        hint.textContent = '✓ Armed. Next run within 6h while plugged in & idle.';
+        hint.className = 'power-hint';
+        hint.style.color = 'var(--text3)';
+      } else {
+        hint.textContent = '';
+        hint.className = 'power-hint';
+      }
+    }
+  }
+
+  // Last-run results panel (before/after cache size)
+  if (d.last_run_stats) {
+    const st = d.last_run_stats;
+    const panel = document.getElementById('results-panel');
+    if (st.after_bytes > 0 && !st.in_progress) {
+      panel.style.display = '';
+      document.getElementById('result-gained').textContent = '+' + fmtBytes(st.gained_bytes);
+      document.getElementById('result-before').textContent = fmtBytes(st.before_bytes);
+      document.getElementById('result-after').textContent = fmtBytes(st.after_bytes);
+      const tot = d.total_cache_bytes ? fmtBytes(d.total_cache_bytes) : null;
+      document.getElementById('result-total').textContent =
+        tot ? `Total compiled cache: ${tot}` : '';
+    }
   }
 
   // GPU
@@ -809,6 +1043,9 @@ function renderGames(games) {
         <div class="card-select" onclick="event.stopPropagation();toggleGame('${g.appid}')">
           <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2.5"><polyline points="2,6 5,9 10,3"/></svg>
         </div>
+        <button class="card-details-btn" data-appid="${g.appid}" title="Benchmark / frametime details">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </button>
       </div>
       <div class="card-body">
         <div class="card-name">${g.name}</div>
@@ -930,6 +1167,37 @@ async function setThreads(val) {
   await fetch('/api/set_threads', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({threads: parseInt(val)}) });
 }
 
+// ── Auto-update toggle ────────────────────
+async function setAutoUpdate(enabled) {
+  const toggle = document.getElementById('auto-update-toggle');
+  toggle.disabled = true;
+  try {
+    const r = await fetch('/api/set_auto_update', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({enabled})
+    });
+    const d = await r.json();
+    if (!d.success) {
+      alert('Could not change auto-update: ' + (d.message || 'unknown error'));
+      toggle.checked = !enabled; // revert
+    }
+    S.autoUpdate = d.auto_update_enabled;
+  } catch(e) {
+    alert('Could not reach the backend to change auto-update.');
+    toggle.checked = !enabled;
+  } finally {
+    toggle.disabled = false;
+  }
+}
+
+// ── Byte formatting ───────────────────────
+function fmtBytes(b) {
+  if (!b || b <= 0) return '0 MB';
+  const gb = b / (1024**3);
+  if (gb >= 1) return gb.toFixed(1) + ' GB';
+  return Math.round(b / (1024**2)) + ' MB';
+}
+
 // ── Log ───────────────────────────────────
 function appendLog(lines) {
   const el = document.getElementById('log-body');
@@ -950,7 +1218,182 @@ function appendLog(lines) {
 }
 function clearLog() { document.getElementById('log-body').innerHTML = ''; S.logLen = 0; }
 
+// ── Benchmark modal ───────────────────────
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function openBench(appid, name) {
+  if (!name && S.games[appid]) name = S.games[appid].name;
+  const ov = document.getElementById('bench-overlay');
+  document.getElementById('bench-title').textContent = name || 'Benchmark';
+  document.getElementById('bench-body').innerHTML =
+    '<div style="text-align:center;color:var(--text3);padding:30px;">Loading…</div>';
+  ov.classList.add('open');
+  try {
+    const r = await fetch('/api/benchmark?appid=' + encodeURIComponent(appid));
+    const d = await r.json();
+    renderBench(d, name);
+  } catch(e) {
+    document.getElementById('bench-body').innerHTML =
+      '<div style="text-align:center;color:var(--red);padding:30px;">Could not load benchmark data.</div>';
+  }
+}
+function closeBench() { document.getElementById('bench-overlay').classList.remove('open'); }
+
+function renderBench(d, name) {
+  const body = document.getElementById('bench-body');
+  const hasBefore = d.before && d.before.frames;
+  const hasAfter  = d.after && d.after.frames;
+
+  // Both runs present → show the full comparison
+  if (hasBefore && hasAfter) {
+    const imp = d.improvement_pct;
+    const impClass = (imp != null && imp < 0) ? 'neg' : '';
+    const impStr = imp != null ? (imp >= 0 ? '+' : '') + imp + '%' : '—';
+    body.innerHTML = `
+      <div class="bench-headline">
+        <div class="bench-imp-val ${impClass}">${impStr}</div>
+        <div class="bench-imp-lbl">improvement in 1% low FPS</div>
+      </div>
+      <div class="bench-metrics">
+        <div class="bench-metric before">
+          <div class="bench-metric-lbl">Before — 1% low</div>
+          <div class="bench-metric-big">${d.before.low1_fps} <span style="font-size:12px;">fps</span></div>
+          <div class="bench-metric-sub">avg ${d.before.avg_fps} · ${d.before.stutter_count} stutters</div>
+        </div>
+        <div class="bench-metric after">
+          <div class="bench-metric-lbl">After — 1% low</div>
+          <div class="bench-metric-big">${d.after.low1_fps} <span style="font-size:12px;">fps</span></div>
+          <div class="bench-metric-sub">avg ${d.after.avg_fps} · ${d.after.stutter_count} stutters</div>
+        </div>
+      </div>
+      <div class="bench-graph-wrap">
+        <div class="bench-graph-title"><span>Frametime (ms) — lower &amp; flatter is better</span></div>
+        <canvas class="bench-graph" id="bench-canvas" width="600" height="140"></canvas>
+        <div class="bench-legend">
+          <span><span class="bench-dot" style="background:var(--red)"></span>Before</span>
+          <span><span class="bench-dot" style="background:var(--green)"></span>After</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);text-align:center;">
+        1% low FPS is the metric that captures stutter — average FPS barely moves, but smoother frame delivery shows here.
+      </div>`;
+    requestAnimationFrame(() => drawFrametimeGraph(d.before_graph, d.after_graph));
+    return;
+  }
+
+  // Otherwise → show setup instructions
+  const mhWarn = d.has_mangohud ? '' :
+    `<div class="bench-warn">MangoHud isn't installed. Install it first: <code>sudo pacman -S mangohud lib32-mangohud</code></div>`;
+  const haveOne = hasBefore || hasAfter;
+  const statusLine = haveOne
+    ? `<div style="color:var(--green);font-size:12px;margin-bottom:14px;">✓ Got your ${hasBefore?'"before"':'"after"'} run. ${hasBefore?'Now compile shaders, then play again to capture the "after" run.':'Play once more before compiling to capture a "before" run.'}</div>`
+    : (d.log_count > 0
+        ? `<div style="color:var(--text2);font-size:12px;margin-bottom:14px;">Found ${d.log_count} log(s) but couldn't parse a full run yet. Play for at least ~30s with the overlay active.</div>`
+        : '');
+  body.innerHTML = `
+    ${mhWarn}
+    ${statusLine}
+    <div style="font-size:13px;color:var(--text);font-weight:600;margin-bottom:4px;">Benchmark this game</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Capture a before/after frametime comparison to see exactly how much stutter pre-compiling removes.</div>
+    <div class="bench-setup">
+      <div class="bench-step">
+        <div class="bench-step-num">1</div>
+        <div class="bench-step-txt">
+          Add this to the game's Steam launch options (right-click game → Properties → Launch Options):
+          <div class="bench-launch">
+            <input type="text" id="bench-launch-str" readonly value="${escHtml(d.launch_string)}">
+            <button class="btn btn-ghost" style="padding:6px 12px;" onclick="copyLaunch()">Copy</button>
+          </div>
+        </div>
+      </div>
+      <div class="bench-step">
+        <div class="bench-step-num">2</div>
+        <div class="bench-step-txt"><strong>Before compiling:</strong> launch the game and play through an area that normally stutters. Logging runs automatically and stops after 5 minutes (covering load time). Quit when done.</div>
+      </div>
+      <div class="bench-step">
+        <div class="bench-step-num">3</div>
+        <div class="bench-step-txt">Close this dialog, select the game, and press <strong>Compile Selected</strong>.</div>
+      </div>
+      <div class="bench-step">
+        <div class="bench-step-num">4</div>
+        <div class="bench-step-txt"><strong>After compiling:</strong> play the same area again. Then reopen this dialog to see your before/after graph.</div>
+      </div>
+    </div>
+    ${(d.diag && d.diag.length) ? `
+      <details style="margin-top:16px;">
+        <summary style="font-size:11px;color:var(--text3);cursor:pointer;">Diagnostics (${d.log_count} log${d.log_count===1?'':'s'} found)</summary>
+        <div style="font-size:11px;color:var(--text2);font-family:var(--mono);margin-top:8px;line-height:1.7;">
+          ${d.diag.map(escHtml).join('<br>')}
+          <br><span style="color:var(--text3);">Logs folder: ${escHtml(d.folder)}</span>
+        </div>
+      </details>` : ''}`;
+}
+
+function copyLaunch() {
+  const inp = document.getElementById('bench-launch-str');
+  inp.select();
+  try {
+    navigator.clipboard.writeText(inp.value);
+  } catch(e) { document.execCommand('copy'); }
+}
+
+function drawFrametimeGraph(before, after) {
+  const cv = document.getElementById('bench-canvas');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, pad = 6;
+  ctx.clearRect(0,0,W,H);
+
+  const all = [].concat(before||[], after||[]);
+  if (!all.length) return;
+  // Cap the y-axis at a sensible max so spikes don't flatten everything;
+  // use 95th percentile * 1.4 or 50ms, whichever is larger.
+  const sorted = [...all].sort((a,b)=>a-b);
+  const p95 = sorted[Math.floor(sorted.length*0.95)] || 33;
+  const yMax = Math.max(33, p95 * 1.4);
+
+  // Gridlines at 16.7ms (60fps) and 33.3ms (30fps)
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '9px monospace';
+  [16.67, 33.33].forEach(ms => {
+    if (ms > yMax) return;
+    const y = H - pad - (ms/yMax)*(H-2*pad);
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+    ctx.fillText((ms===16.67?'60fps':'30fps'), W-44, y-2);
+  });
+
+  function plot(series, color) {
+    if (!series || !series.length) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.beginPath();
+    series.forEach((ms, i) => {
+      const x = pad + (i/(series.length-1))*(W-2*pad);
+      const y = H - pad - Math.min(ms/yMax,1)*(H-2*pad);
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+  // Draw 'after' first (green) then 'before' (red) on top so spikes are visible
+  plot(after, getCss('--green') || '#22c55e');
+  plot(before, getCss('--red') || '#ef4444');
+}
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+
 // ── Init ──────────────────────────────────
+// Delegated handler: catch clicks on the benchmark/details button before
+// they bubble to the card's toggle handler.
+document.getElementById('game-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.card-details-btn');
+  if (btn) {
+    e.stopPropagation();
+    e.preventDefault();
+    openBench(btn.dataset.appid);
+  }
+}, true); // capture phase — runs before the card's onclick
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBench(); });
 poll();
 setInterval(poll, 1500);
 setInterval(() => fetch('/api/ping').catch(()=>{}), 5000);
